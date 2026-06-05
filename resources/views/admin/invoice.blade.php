@@ -144,7 +144,7 @@
         <tr>
             <td>
                 <div class="company-name">{{ $company_name }}</div>
-                <p style="color: #7f8c8d;">Computers & Website</p>
+                <p style="color: #7f8c8d;">{{ $company_extras }}</p>
                 @php
                 $addr = explode(', ',$company_address);
                 @endphp

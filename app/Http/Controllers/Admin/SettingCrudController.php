@@ -68,8 +68,14 @@ class SettingCrudController extends CrudController
                 'name'    => 'company_name',
                 'label'   => 'Company Name',
                 'type'    => 'text',
-                // 2. Use the saved value if it exists, otherwise leave it empty
                 'default' => $savedSettings['company_name'] ?? '',
+                'tab' => 'Address'
+            ],
+            [
+                'name'    => 'company_extras',
+                'label'   => 'Company Extras',
+                'type'    => 'text',
+                'default' => $savedSettings['company_extras'] ?? '',
                 'tab' => 'Address'
             ],
             [

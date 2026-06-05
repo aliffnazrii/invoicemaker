@@ -6,6 +6,9 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use App\Models\Invoice;
+use App\Models\Contact;
+use App\Models\InvoiceItem;
 
 /**
  * Class InvoiceCrudController
@@ -29,10 +32,7 @@ class InvoiceCrudController extends CrudController
     }
 
 
-    protected function setupListOperation()
-    {
-
-    }
+    protected function setupListOperation() {}
 
     protected function setupCreateOperation()
     {
@@ -47,9 +47,6 @@ class InvoiceCrudController extends CrudController
 
     public function invoice(Request $request)
     {
-        // dd($request->all());
-
-        // 1. Validate form incoming data structure safely
         $request->validate([
             'invoice_number'    => 'required|string',
             'date'              => 'required|date',
@@ -57,14 +54,20 @@ class InvoiceCrudController extends CrudController
             'items'             => 'required|array',
         ]);
 
-        // 2. Format structure arrays cleanly for the PDF data parser loop
+        $contact = Contact::firstOrCreate([
+            'client_phone' => $request->phone
+        ], [
+            'first_name' => $request->client_name,
+            'company_name' => $request->client_name,
+            'email' =>  $request->client_email,
+            'phone' =>  $request->client_phone
+        ]);
+
         $items = [];
         $subtotal = 0;
 
-        // Transform input columns into organized items array safely
         if (isset($request->items) && is_array($request->items)) {
             foreach ($request->items as $key => $value) {
-                // Fixed typo: Ensure both variables use '$'
                 $qty = floatval($value['quantity'] ?? 1);
                 $price = floatval($value['price'] ?? 0);
                 $lineTotal = $qty * $price;
@@ -84,10 +87,11 @@ class InvoiceCrudController extends CrudController
         $taxAmount = $subtotal * ($taxPercent / 100);
         $grandTotal = $subtotal + $taxAmount;
 
-        // 3. Bind properties into payload variable arrays
         $data = [
-            'company_name'   => 'AliffTech Solution',
-            'company_address'   => '55 Jalan Kubah U8/59, Bukit Jelutong, 40150, Shah Alam Selangor',
+            'company_name'   => config('settings.company_name'),
+            'company_extras'   => config('settings.company_extras'),
+            'company_address'   => config('settings.company_address'),
+            'company_phone'   => config('settings.company_phone'),
             'invoice_number' => $request->invoice_number,
             'date'       => $request->date,
             'billing_notes'  => $request->notes,
@@ -101,15 +105,33 @@ class InvoiceCrudController extends CrudController
             'discount'    => $request->discount,
         ];
 
-        // 4. Generate the PDF view asset layout configuration
+        $invoice = Invoice::create([
+            'invoice_number' => $request->invoice_number,
+            'contact_id' => $contact->id,
+            'date' => date('Y-m-d H:i:s'),
+            'subtotal' => $subtotal,
+            'discount' => $request->discount,
+            'total' => $grandTotal,
+            'notes' => $request->notes,
+        ]);
+
+        foreach ($request->items as $item) {
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'product_id' => $item->quantity,
+                'description' => $item->quantity,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->price,
+                'quantity' => $item->quantity,
+                'subtotal' => $item->quantity * $item->price,
+                'total' => $item->quantity * $item->price,
+            ]);
+        }
+
         $pdf = Pdf::loadView('admin.invoice', $data);
 
-        // Set layout parameters for safety boundary options
         $pdf->setPaper('A4', 'portrait');
 
-        // 5. Instantly force download back to client web streams
         return $pdf->download('invoice-' . $request->invoice_number . '.pdf');
-
-        // \Alert::flash('success');
     }
 }
