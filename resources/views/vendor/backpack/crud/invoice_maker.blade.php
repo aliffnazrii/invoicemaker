@@ -7,7 +7,6 @@ $crud->entity_name_plural => url($crud->route),
 trans('backpack::crud.add') => false,
 ];
 
-// if breadcrumbs aren't defined in the CrudController, use the default breadcrumbs
 $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
 @endphp
 
@@ -15,10 +14,8 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
 <div class="row" bp-section="invoice-create-form">
   <div class="col-md-12">
 
-    {{-- Back button link --}}
     <a href="{{ url($crud->route) }}" class="hidden-print back-btn"><i class="la la-angle-double-left"></i> {{ trans('backpack::crud.back_to_all') }} <span>{{ $crud->entity_name_plural }}</span></a>
 
-    {{-- Main Form Container --}}
     <form method="POST" action="{{ backpack_url('/download-invoice') }}" class="mt-2">
       {!! csrf_field() !!}
 
@@ -28,7 +25,6 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
         </div>
 
         <div class="card-body">
-          {{-- Row 1: Core Invoice Metadata --}}
           <div class="row">
             <div class="form-group col-md-4">
               <label class="font-weight-bold">Invoice Number</label>
@@ -40,7 +36,6 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
             </div>
           </div>
 
-          {{-- Row 2: Contact Selection with Select2 --}}
           <div class="row mt-2">
             <div class="form-group col-md-12">
               <label class="font-weight-bold">Select Contact</label>
@@ -50,7 +45,6 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
             </div>
           </div>
 
-          {{-- Row 3: Customer / Client Details (Hidden by default, shown on selection) --}}
           <div id="client-details-wrapper" style="display: none;">
             <div class="row">
               <div class="form-group col-md-6">
@@ -66,13 +60,28 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
                 <input type="tel" name="client_phone" id="client_phone" class="form-control" value="">
               </div>
               <div class="form-group col-md-6">
-                <label class="font-weight-bold">Billing Address (Optional)</label>
-                <textarea name="client_address" id="client_address" class="form-control" rows="1"></textarea>
+                <label class="font-weight-bold">Address 1</label>
+                <input type="text" name="address_line_1" id="client_address_line_1" class="form-control">
+              </div>
+              <div class="form-group col-md-6">
+                <label class="font-weight-bold">Address 2</label>
+                <input type="text" name="address_line_2" id="client_address_line_2" class="form-control">
+              </div>
+              <div class="form-group col-md-6">
+                <label class="font-weight-bold">City</label>
+                <input type="text" name="city" id="client_city" class="form-control">
+              </div>
+              <div class="form-group col-md-6">
+                <label class="font-weight-bold">State</label>
+                <input type="text" name="state" id="client_state" class="form-control">
+              </div>
+              <div class="form-group col-md-6">
+                <label class="font-weight-bold">Postcode</label>
+                <input type="text" name="postal_code" id="client_postal_code" class="form-control">
               </div>
             </div>
           </div>
 
-          {{-- Row 4: Invoice Line Items Table with Add/Remove buttons --}}
           <h5 class="mt-4 font-weight-bold text-secondary">Line Items</h5>
           <div class="table-responsive">
             <table class="table table-bordered table-striped mt-2" id="invoice-items-table">
@@ -86,7 +95,6 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
                 </tr>
               </thead>
               <tbody id="invoice-items-body">
-                {{-- Initial single blank line item --}}
                 <tr class="line-item">
                   <td class="product-cell">
                     <select name="items[0][product_id]" class="form-control product-select" style="width: 100%;" required>
@@ -111,14 +119,12 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
             </table>
           </div>
 
-          {{-- Add Item Button --}}
           <div class="row mt-2">
             <div class="col-md-12">
               <button type="button" id="add-item-btn" class="btn btn-sm btn-secondary"><i class="la la-plus"></i> Add Line Item</button>
             </div>
           </div>
 
-          {{-- Row 5: Financial Summary Box with Discount and Shipping --}}
           <div class="row justify-content-end mt-3">
             <div class="col-md-5">
               <div class="border rounded p-3 bg-light">
@@ -126,8 +132,7 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
                   <span class="font-weight-bold">Subtotal:</span>
                   <span>RM <span id="invoice-subtotal">0.00</span></span>
                 </div>
-                
-                {{-- Discount Field --}}
+
                 <div class="d-flex justify-content-between mb-2 align-items-center">
                   <span class="font-weight-bold">Discount:</span>
                   <div class="d-flex align-items-center">
@@ -135,8 +140,7 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
                     <input type="number" id="discount-amount" name="discount" class="form-control form-control-sm text-right" style="width: 120px;" value="0.00" min="0" step="0.01">
                   </div>
                 </div>
-                
-                {{-- Shipping Field --}}
+
                 <div class="d-flex justify-content-between mb-2 align-items-center">
                   <span class="font-weight-bold">Shipping:</span>
                   <div class="d-flex align-items-center">
@@ -144,10 +148,9 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
                     <input type="number" id="shipping-amount" name="shipping" class="form-control form-control-sm text-right" style="width: 120px;" value="0.00" min="0" step="0.01">
                   </div>
                 </div>
-                
+
                 <hr>
-                
-                {{-- Grand Total --}}
+
                 <div class="d-flex justify-content-between text-primary h5 font-weight-bold mb-0">
                   <span>Grand Total:</span>
                   <span>RM <span id="invoice-grand-total">0.00</span></span>
@@ -155,16 +158,12 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
               </div>
             </div>
           </div>
-
-          {{-- Row 6: Footer Memo/Notes --}}
           <div class="form-group mt-3">
             <label class="font-weight-bold">Notes / Payment Terms</label>
             <textarea name="notes" class="form-control" rows="2" placeholder="Bank account details, payment instructions, or thank you note..."></textarea>
           </div>
 
         </div>
-
-        {{-- Form Actions Toolbar --}}
         <div class="card-footer bg-white">
           <button type="submit" class="btn btn-success"><i class="la la-save"></i> Download</button>
         </div>
@@ -183,25 +182,34 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
   .select2-container--bootstrap-5 .select2-selection {
     min-height: calc(1.5em + 0.75rem + 2px);
   }
+
   .line-item {
     vertical-align: middle;
   }
+
   .product-cell {
     min-width: 250px;
   }
-  .qty-cell, .price-cell, .total-cell {
+
+  .qty-cell,
+  .price-cell,
+  .total-cell {
     width: 120px;
   }
+
   .action-cell {
     width: 60px;
   }
+
   .form-control-sm {
     font-size: 0.875rem;
     padding: 0.25rem 0.5rem;
   }
+
   .mr-2 {
     margin-right: 0.5rem;
   }
+
   .text-right {
     text-align: right;
   }
@@ -218,7 +226,7 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
     // AJAX endpoint for contacts - YOU NEED TO CREATE THIS ROUTE
     // Example route: Route::get('api/contacts/search', [ContactController::class, 'search'])->name('contact.search');
     const contactAjaxUrl = "{{ backpack_url('api/contacts/search') }}";
-    
+
     // Initialize Select2 for contact selector
     $('#contact-selector').select2({
       theme: 'bootstrap-5',
@@ -237,10 +245,10 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
         },
         processResults: function(data, params) {
           params.page = params.page || 1;
-          
+
           // Add "Add New Contact" option at the beginning of results
           const results = data.results || data.items || data.data || [];
-          
+
           // Create custom option for adding new contact
           const newContactOption = {
             id: 'new',
@@ -248,7 +256,7 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
             isNew: true,
             name: 'Add New Contact'
           };
-          
+
           return {
             results: [newContactOption, ...results],
             pagination: {
@@ -268,32 +276,32 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
       if (contact.loading) {
         return contact.text;
       }
-      
+
       if (contact.isNew) {
         return $(`<div class="text-primary font-weight-bold">${contact.text}</div>`);
       }
-      
+
       const name = contact.name || '';
       const email = contact.email || '';
       const phone = contact.phone || '';
-      
+
       let markup = `<div>`;
       markup += `<strong>${name}</strong>`;
       if (email) markup += `<br><small class="text-muted">${email}</small>`;
       if (phone) markup += ` <small class="text-muted">(${phone})</small>`;
       markup += `</div>`;
-      
+
       return $(markup);
     }
 
     // Format selected contact display
     function formatContactSelection(contact) {
       if (!contact.id) return contact.text;
-      
+
       if (contact.isNew) {
         return 'Add New Contact';
       }
-      
+
       const name = contact.name || contact.text;
       const email = contact.email ? ` (${contact.email})` : '';
       return `${name}${email}`;
@@ -303,18 +311,29 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
     const clientNameInput = document.getElementById('client_name');
     const clientEmailInput = document.getElementById('client_email');
     const clientPhoneInput = document.getElementById('client_phone');
-    const clientAddressInput = document.getElementById('client_address');
+    // const clientAddressInput = document.getElementById('client_address');
+    const clientAddress1 = document.getElementById('client_address_line_1');
+    const clientAddress2 = document.getElementById('client_address_line_2');
+    const clientAddressCity = document.getElementById('client_city');
+    const clientAddressState = document.getElementById('client_state');
+    const clientAddressPostalCode = document.getElementById('client_postal_code');
+
+    //     client_address_line_1
+    // client_address_line_2
+    // client_city
+    // client_state
+    // client_postal_code
 
     // Handle contact selection change
     $('#contact-selector').on('change', function(e) {
       const selectedData = $(this).select2('data')[0];
-      
+
       if (!selectedData) {
         detailsWrapper.style.display = 'none';
         clientNameInput.required = false;
         return;
       }
-      
+
       if (selectedData.id === 'new') {
         // Show details wrapper and clear fields for new contact entry
         detailsWrapper.style.display = 'block';
@@ -325,35 +344,43 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
         clientNameInput.required = true;
         clientEmailInput.required = false;
         clientPhoneInput.required = false;
-        clientAddressInput.required = false;
+        // clientAddressInput.required = false;
+        clientAddress1.required = false;
+        clientAddress2.required = false;
+        clientAddressCity.required = false;
+        clientAddressState.required = false;
+        clientAddressPostalCode.required = false;
       } else if (selectedData.id && selectedData.id !== 'new') {
-        // Existing contact selected: populate fields and show wrapper
         detailsWrapper.style.display = 'block';
         clientNameInput.value = selectedData.name || selectedData.text || '';
         clientEmailInput.value = selectedData.email || '';
         clientPhoneInput.value = selectedData.phone || '';
-        clientAddressInput.value = selectedData.address || '';
         clientNameInput.required = true;
         clientEmailInput.required = false;
         clientPhoneInput.required = false;
-        clientAddressInput.required = false;
+        clientAddress1.value = selectedData.address_line_1;
+        clientAddress2.value = selectedData.address_line_2;
+        clientAddressCity.value = selectedData.city;
+        clientAddressState.value = selectedData.postal_code;
+        clientAddressPostalCode.value = selectedData.state;
+        clientAddress1.required = false;
+        clientAddress2.required = false;
+        clientAddressCity.required = false;
+        clientAddressState.required = false;
+        clientAddressPostalCode.required = false;
       } else {
         detailsWrapper.style.display = 'none';
         clientNameInput.required = false;
       }
     });
 
-    // --- Product Selection with Select2 ---
-    // AJAX endpoint for products - YOU NEED TO CREATE THIS ROUTE
     const productAjaxUrl = "{{ backpack_url('api/products/search') }}";
-    
+
     let itemIndex = 1;
 
-    // Get discount and shipping input elements
     const discountInput = document.getElementById('discount-amount');
     const shippingInput = document.getElementById('shipping-amount');
 
-    // Function to initialize Select2 on a product select element
     function initProductSelect(selectElement) {
       $(selectElement).select2({
         theme: 'bootstrap-5',
@@ -385,23 +412,21 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
         templateSelection: formatProductSelection
       });
 
-      // Listen to select2:select event
       $(selectElement).on('select2:select', function(e) {
         const selectedData = e.params.data;
         const row = $(selectElement).closest('tr');
-        
+
         const priceField = row.find('.item-price');
         const productPrice = selectedData.price || selectedData.unit_price || 0;
         priceField.val(productPrice);
-        
+
         const hiddenDesc = row.find('.item-description-hidden');
         const productName = selectedData.text || selectedData.name || selectedData.product_name;
         hiddenDesc.val(productName);
-        
+
         calculateTotals();
       });
 
-      // Listen to clear event
       $(selectElement).on('select2:clear', function() {
         const row = $(selectElement).closest('tr');
         row.find('.item-price').val(0);
@@ -410,32 +435,29 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
       });
     }
 
-    // Format product results in dropdown
     function formatProductResult(product) {
       if (product.loading) {
         return product.text;
       }
-      
+
       const price = product.price || product.unit_price || 0;
       const name = product.text || product.name || product.product_name;
-      
+
       let markup = `<div class="d-flex justify-content-between">`;
       markup += `<span><strong>${name}</strong></span>`;
       markup += `<span class="text-primary">RM ${parseFloat(price).toFixed(2)}</span>`;
       markup += `</div>`;
-      
+
       return $(markup);
     }
 
-    // Format selected product display
     function formatProductSelection(product) {
       if (!product.id) return product.text;
-      
+
       const name = product.text || product.name || product.product_name;
       return `${name}`;
     }
 
-    // Function to calculate totals for all line items including discount and shipping
     function calculateTotals() {
       let subtotal = 0;
       const rows = document.querySelectorAll('#invoice-items-body .line-item');
@@ -450,21 +472,17 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
         subtotal += total;
       });
 
-      // Get discount and shipping values
       const discount = parseFloat(discountInput.value) || 0;
       const shipping = parseFloat(shippingInput.value) || 0;
-      
-      // Calculate grand total: subtotal - discount + shipping
+
       const grandTotal = subtotal - discount + shipping;
-      
-      // Ensure grand total doesn't go negative
+
       const finalGrandTotal = grandTotal < 0 ? 0 : grandTotal;
 
       document.getElementById('invoice-subtotal').innerText = subtotal.toFixed(2);
       document.getElementById('invoice-grand-total').innerText = finalGrandTotal.toFixed(2);
     }
 
-    // Function to add a new line item row
     function addLineItem() {
       const newRow = document.createElement('tr');
       newRow.className = 'line-item';
@@ -490,18 +508,17 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
       `;
 
       document.getElementById('invoice-items-body').appendChild(newRow);
-      
+
       const newSelect = newRow.querySelector('.product-select');
       initProductSelect(newSelect);
-      
+
       attachRowEvents(newRow);
-      
+
       itemIndex++;
       calculateTotals();
       updateRemoveButtons();
     }
 
-    // Attach event listeners for quantity and price changes within a row
     function attachRowEvents(row) {
       const qtyInput = row.querySelector('.item-qty');
       const priceInput = row.querySelector('.item-price');
@@ -523,7 +540,6 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
       }
     }
 
-    // Reindex item names for consistency
     function reindexItems() {
       const rows = document.querySelectorAll('#invoice-items-body .line-item');
       rows.forEach((row, idx) => {
@@ -531,7 +547,7 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
         const hiddenDesc = row.querySelector('input[name*="[description]"]');
         const qtyInput = row.querySelector('input[name*="[quantity]"]');
         const priceInput = row.querySelector('input[name*="[price]"]');
-        
+
         if (productSelect) productSelect.name = `items[${idx}][product_id]`;
         if (hiddenDesc) hiddenDesc.name = `items[${idx}][description]`;
         if (qtyInput) qtyInput.name = `items[${idx}][quantity]`;
@@ -539,7 +555,6 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
       });
     }
 
-    // Update remove button visibility
     function updateRemoveButtons() {
       const rows = document.querySelectorAll('#invoice-items-body .line-item');
       const removeBtns = document.querySelectorAll('.remove-item-btn');
@@ -550,7 +565,6 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
       }
     }
 
-    // Add event listeners for discount and shipping inputs
     if (discountInput) {
       discountInput.addEventListener('input', calculateTotals);
     }
@@ -558,23 +572,20 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
       shippingInput.addEventListener('input', calculateTotals);
     }
 
-    // Initialize first row
     const initialSelect = document.querySelector('#invoice-items-body .product-select');
     if (initialSelect) {
       initProductSelect(initialSelect);
     }
-    
+
     const initialRow = document.querySelector('#invoice-items-body .line-item');
     attachRowEvents(initialRow);
-    
+
     const initialRemoveBtn = initialRow.querySelector('.remove-item-btn');
     if (initialRemoveBtn) initialRemoveBtn.style.display = 'none';
 
-    // Add item button handler
     const addItemBtn = document.getElementById('add-item-btn');
     addItemBtn.addEventListener('click', addLineItem);
 
-    // Initial calculation
     calculateTotals();
   });
 </script>

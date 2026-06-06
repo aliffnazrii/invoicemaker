@@ -32,7 +32,26 @@ class InvoiceCrudController extends CrudController
     }
 
 
-    protected function setupListOperation() {}
+    protected function setupListOperation()
+    {
+        CRUD::column('invoice_number')->type('text')->label('Invoice');
+
+        CRUD::column('contact_id')
+            ->type('custom_html')
+            ->label('Client Name')
+            ->value(function ($entry) {
+                return $entry->contact->first_name . ' ' . $entry->contact->last_name;
+            }); 
+
+        CRUD::column('date')->type('date');
+        CRUD::column('subtotal')->type('number')->prefix('RM');
+        CRUD::column('discount')->type('number')->prefix('RM');
+
+        CRUD::column('total')
+            ->type('number')
+            ->prefix('RM');
+    }
+
 
     protected function setupCreateOperation()
     {
@@ -45,6 +64,36 @@ class InvoiceCrudController extends CrudController
         $this->setupCreateOperation();
     }
 
+    protected function setupShowOperation()
+    {
+        $this->setupListOperation();
+    
+        $this->crud->addColumn([
+            'name'         => 'contact',
+            'type'         => 'relationship',
+            'label'        => 'Billing Address',
+            'attribute'    => 'address_line_1',
+            'model'        => "App\Models\Contact",
+            'value'        => function($entry) {
+                if (!$entry->contact) {
+                    return '-';
+                }
+                $addressParts = array_filter([
+                    $entry->contact->address_line_1,
+                    $entry->contact->address_line_2,
+                    $entry->contact->city,
+                    $entry->contact->state,
+                    $entry->contact->postal_code,
+                ]);
+                return implode(', ', $addressParts);
+            }
+        ]);
+    
+        $this->crud->with(['contact', 'items']);
+        $this->crud->setShowView('crud::show_invoice');
+    }
+    
+
     public function invoice(Request $request)
     {
         $request->validate([
@@ -55,12 +104,17 @@ class InvoiceCrudController extends CrudController
         ]);
 
         $contact = Contact::firstOrCreate([
-            'client_phone' => $request->phone
+            'phone' => $request->client_phone
         ], [
             'first_name' => $request->client_name,
             'company_name' => $request->client_name,
-            'email' =>  $request->client_email,
-            'phone' =>  $request->client_phone
+            'email' => $request->client_email,
+            'phone' => $request->client_phone,
+            'address_line_1' => $request->address_line_1,
+            'address_line_2' => $request->address_line_2,
+            'city' => $request->city,
+            'postal_code' => $request->postal_code,
+            'state' => $request->state,
         ]);
 
         $items = [];
@@ -105,7 +159,9 @@ class InvoiceCrudController extends CrudController
             'discount'    => $request->discount,
         ];
 
-        $invoice = Invoice::create([
+        $invoice = Invoice::firstOrCreate([
+            'invoice_number' => $request->invoice_number,
+        ], [
             'invoice_number' => $request->invoice_number,
             'contact_id' => $contact->id,
             'date' => date('Y-m-d H:i:s'),
@@ -118,13 +174,13 @@ class InvoiceCrudController extends CrudController
         foreach ($request->items as $item) {
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
-                'product_id' => $item->quantity,
-                'description' => $item->quantity,
-                'quantity' => $item->quantity,
-                'unit_price' => $item->price,
-                'quantity' => $item->quantity,
-                'subtotal' => $item->quantity * $item->price,
-                'total' => $item->quantity * $item->price,
+                'product_id' => (int)$item['product_id'],
+                'description' => $item['description'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $item['price'],
+                'quantity' => $item['quantity'],
+                'subtotal' => $item['quantity'] * $item['price'],
+                'total' => $item['quantity'] * $item['price'],
             ]);
         }
 

@@ -225,7 +225,11 @@ class ContactCrudController extends CrudController
                 'name' => $contact->first_name . ' ' . $contact->last_name,
                 'email' => $contact->email,
                 'phone' => $contact->phone,
-                'address' => $contact->address_line_1 . ', ' . $contact->address_line_2 . ', ' . $contact->city . ', ' . $contact->postal_code . ', ' . $contact->state,
+                'address_line_1' => $contact->address_line_1,
+                'address_line_2' => $contact->address_line_2,
+                'city' => $contact->city,
+                'postal_code' => $contact->postal_code,
+                'state' => $contact->state,
             ];
         });
 
