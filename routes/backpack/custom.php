@@ -21,13 +21,13 @@ Route::group([
     Route::crud('user', 'UserCrudController');
     Route::crud('invoice', 'InvoiceCrudController');
     Route::post('/download-invoice', 'InvoiceCrudController@invoice');
+    Route::get('invoice/{id}/redownload-invoice', 'InvoiceCrudController@redownload')->name('invoice.redownload');
     Route::crud('setting', 'SettingCrudController');
     Route::crud('contact', 'ContactCrudController');
     Route::crud('product', 'ProductCrudController');
 
     Route::get('api/products/search', [ProductCrudController::class, 'fetch'])->name('product.search');
     Route::get('api/contacts/search', [ContactCrudController::class, 'fetch'])->name('contact.search');
-
 }); // this should be the absolute last line of this file
 
 /**

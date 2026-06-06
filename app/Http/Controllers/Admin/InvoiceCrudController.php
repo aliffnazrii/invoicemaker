@@ -23,7 +23,6 @@ class InvoiceCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-
     public function setup()
     {
         CRUD::setModel(\App\Models\invoice::class);
@@ -31,9 +30,11 @@ class InvoiceCrudController extends CrudController
         CRUD::setEntityNameStrings('Invoice', 'Invoices');
     }
 
-
     protected function setupListOperation()
     {
+
+        $this->crud->addButtonFromView('line', 'redownload_invoice', 'redownload_invoice', 'end');
+
         CRUD::column('invoice_number')->type('text')->label('Invoice');
 
         CRUD::column('contact_id')
@@ -41,7 +42,7 @@ class InvoiceCrudController extends CrudController
             ->label('Client Name')
             ->value(function ($entry) {
                 return $entry->contact->first_name . ' ' . $entry->contact->last_name;
-            }); 
+            });
 
         CRUD::column('date')->type('date');
         CRUD::column('subtotal')->type('number')->prefix('RM');
@@ -51,11 +52,8 @@ class InvoiceCrudController extends CrudController
             ->type('number')
             ->prefix('RM');
     }
-
-
     protected function setupCreateOperation()
     {
-
         $this->crud->setCreateView('crud::invoice_maker');
     }
 
@@ -66,15 +64,16 @@ class InvoiceCrudController extends CrudController
 
     protected function setupShowOperation()
     {
+
         $this->setupListOperation();
-    
+
         $this->crud->addColumn([
             'name'         => 'contact',
             'type'         => 'relationship',
             'label'        => 'Billing Address',
             'attribute'    => 'address_line_1',
             'model'        => "App\Models\Contact",
-            'value'        => function($entry) {
+            'value'        => function ($entry) {
                 if (!$entry->contact) {
                     return '-';
                 }
@@ -88,11 +87,11 @@ class InvoiceCrudController extends CrudController
                 return implode(', ', $addressParts);
             }
         ]);
-    
+
         $this->crud->with(['contact', 'items']);
         $this->crud->setShowView('crud::show_invoice');
     }
-    
+
 
     public function invoice(Request $request)
     {
@@ -189,5 +188,66 @@ class InvoiceCrudController extends CrudController
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->download('invoice-' . $request->invoice_number . '.pdf');
+    }
+
+    public function redownload(Request $request)
+    {
+        $invoice_id = $request->id;
+
+        $invoice = Invoice::with('items')->findOrFail($invoice_id);
+
+        $items = [];
+        $subtotal = 0;
+
+        if ($invoice->items) {
+            foreach ($invoice->items as $key => $value) {
+                $qty = floatval($value->quantity ?? 1);
+                $price = floatval($value->price ?? 0);
+                $lineTotal = $qty * $price;
+
+                $subtotal += $lineTotal;
+
+                $items[] = [
+                    'description' => $value->description,
+                    'quantity'    => $qty,
+                    'price'       => $price,
+                    'total'       => $lineTotal
+                ];
+            }
+        }
+
+        $taxPercent = floatval($invoice->tax_total ?? 0);
+        $taxAmount = $subtotal * ($taxPercent / 100);
+        $grandTotal = $subtotal + $taxAmount;
+
+        $contact = $invoice->contact()->first();
+
+        $data = [
+            'company_name'   => config('settings.company_name'),
+            'company_extras'   => config('settings.company_extras'),
+            'company_address'   => config('settings.company_address'),
+            'company_phone'   => config('settings.company_phone'),
+            'invoice_number' => $invoice->invoice_number,
+            'date'       => $invoice->date,
+            'billing_notes'  => $invoice->notes,
+            'items'          => $items,
+            'subtotal'       => $subtotal,
+            'grand_total'    => $grandTotal,
+            'client_name'       => $contact->first_name . ' ' . $contact->last_name,
+            'client_email'    => $contact->email,
+            'client_address' => '',
+            'client_phone'    => $contact->phone,
+            'discount'    => $contact->discount,
+        ];
+
+        if (config('settings.allow_client_address')) {
+            $data['client_address'] = $contact->address_line_1 . ', ' . $contact->address_line_2 . ', ' . $contact->city . ', ' . $contact->postal_code . ', ' . $contact->state;
+        }
+
+        $pdf = Pdf::loadView('admin.invoice', $data);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download('invoice-' . $invoice->invoice_number . '.pdf');
     }
 }

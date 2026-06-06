@@ -93,6 +93,17 @@ class SettingCrudController extends CrudController
                 'tab' => 'Address',
                 'prefix' => '+60'
             ],
+            [
+                'name'    => 'allow_client_address',
+                'label'   => 'Show Client Address',
+                'type'    => 'select_from_array',
+                'options'  => [
+                    1 => 'Yes',
+                    0 => 'No',
+                ],
+                'default' => $savedSettings['allow_client_address'] ?? '',
+                'tab' => 'Client',
+            ],
         ]);
     }
 
