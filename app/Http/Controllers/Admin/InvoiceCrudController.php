@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\Invoice;
 use App\Models\Contact;
 use App\Models\InvoiceItem;
+use App\Models\Product;
 
 /**
  * Class InvoiceCrudController
@@ -19,7 +20,7 @@ class InvoiceCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    // use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -96,7 +97,7 @@ class InvoiceCrudController extends CrudController
     public function invoice(Request $request)
     {
         $request->validate([
-            'invoice_number'    => 'required|string',
+            'invoice_number'    => 'required|string|unique:invoices,invoice_number',
             'date'              => 'required|date',
             'client_name'       => 'required',
             'items'             => 'required|array',
@@ -121,8 +122,12 @@ class InvoiceCrudController extends CrudController
 
         if (isset($request->items) && is_array($request->items)) {
             foreach ($request->items as $key => $value) {
+
+                $product_id = (int)$value['product_id'];
+                $product = Product::findOrFail($product_id);
+    
                 $qty = floatval($value['quantity'] ?? 1);
-                $price = floatval($value['price'] ?? 0);
+                $price = floatval($product->price ?? 0);
                 $lineTotal = $qty * $price;
 
                 $subtotal += $lineTotal;
@@ -160,8 +165,6 @@ class InvoiceCrudController extends CrudController
 
         $invoice = Invoice::firstOrCreate([
             'invoice_number' => $request->invoice_number,
-        ], [
-            'invoice_number' => $request->invoice_number,
             'contact_id' => $contact->id,
             'date' => date('Y-m-d H:i:s'),
             'subtotal' => $subtotal,
@@ -171,15 +174,20 @@ class InvoiceCrudController extends CrudController
         ]);
 
         foreach ($request->items as $item) {
+
+            $product_id = (int)$item['product_id'];
+
+            $product = Product::findOrFail($product_id);
+
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
-                'product_id' => (int)$item['product_id'],
+                'product_id' => $product_id,
                 'description' => $item['description'],
                 'quantity' => $item['quantity'],
-                'unit_price' => $item['price'],
+                'unit_price' => $product->price,
                 'quantity' => $item['quantity'],
-                'subtotal' => $item['quantity'] * $item['price'],
-                'total' => $item['quantity'] * $item['price'],
+                'subtotal' => $item['quantity'] * (float)$product->price,
+                'total' => $item['quantity'] *  (float)$product->price,
             ]);
         }
 
@@ -200,9 +208,9 @@ class InvoiceCrudController extends CrudController
         $subtotal = 0;
 
         if ($invoice->items) {
-            foreach ($invoice->items as $key => $value) {
-                $qty = floatval($value->quantity ?? 1);
-                $price = floatval($value->price ?? 0);
+            foreach ($invoice->items as $value) {
+                $qty = $value->quantity ?? 1;
+                $price = $value->unit_price ?? 0;
                 $lineTotal = $qty * $price;
 
                 $subtotal += $lineTotal;
@@ -237,7 +245,7 @@ class InvoiceCrudController extends CrudController
             'client_email'    => $contact->email,
             'client_address' => '',
             'client_phone'    => $contact->phone,
-            'discount'    => $contact->discount,
+            'discount'    => $invoice->discount,
         ];
 
         if (config('settings.allow_client_address')) {

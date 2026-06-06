@@ -28,7 +28,7 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
           <div class="row">
             <div class="form-group col-md-4">
               <label class="font-weight-bold">Invoice Number</label>
-              <input type="text" name="invoice_number" class="form-control" value="INV-{{ date('Ymd-His') }}" required>
+              <input type="text" name="invoice_number" class="form-control" value="INV-{{ date('YmdHis') }}" required>
             </div>
             <div class="form-group col-md-4">
               <label class="font-weight-bold">Date</label>
@@ -106,7 +106,8 @@ $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
                     <input type="number" name="items[0][quantity]" class="form-control item-qty" value="1" min="1" step="any" required>
                   </td>
                   <td class="price-cell">
-                    <input type="number" name="items[0][price]" class="form-control item-price" value="0.00" min="0" step="0.01" required>
+                    <input type="number" name="
+                    ]" class="form-control item-price" value="0.00" min="0" step="0.01" required>
                   </td>
                   <td class="total-cell">
                     <input type="text" class="form-control item-total" value="0.00" readonly>
