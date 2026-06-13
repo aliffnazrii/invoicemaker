@@ -6,6 +6,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Http\Request;
 use \App\Models\Product;
+
 /**
  * Class ProductCrudController
  * @package App\Http\Controllers\Admin
@@ -34,6 +35,8 @@ class ProductCrudController extends CrudController
 
     protected function setupListOperation()
     {
+
+        
         $this->crud->addColumns([
             [
                 'name'  => 'name',

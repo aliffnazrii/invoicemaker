@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\Contact;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Support\CompanySettings;
 
 /**
  * Class InvoiceCrudController
@@ -20,7 +21,7 @@ class InvoiceCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    // use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -33,8 +34,9 @@ class InvoiceCrudController extends CrudController
 
     protected function setupListOperation()
     {
-
+        $this->crud->addButtonFromView('line', 'mark_paid_invoice', 'mark_paid_invoice', 'end');
         $this->crud->addButtonFromView('line', 'redownload_invoice', 'redownload_invoice', 'end');
+
 
         CRUD::column('invoice_number')->type('text')->label('Invoice');
 
@@ -52,6 +54,15 @@ class InvoiceCrudController extends CrudController
         CRUD::column('total')
             ->type('number')
             ->prefix('RM');
+
+        CRUD::column('is_paid')
+            ->type('custom_html')
+            ->label('Status')
+            ->value(function ($entry) {
+                return $entry->is_paid
+                    ? '<span class="badge bg-success text-white">Paid</span>'
+                    : '<span class="badge bg-warning text-white">Unpaid</span>';
+            });
     }
     protected function setupCreateOperation()
     {
@@ -60,7 +71,8 @@ class InvoiceCrudController extends CrudController
 
     protected function setupUpdateOperation()
     {
-        $this->setupCreateOperation();
+        $this->crud->setEditView('crud::edit_invoice');
+        $this->crud->with(['contact', 'items.product']);
     }
 
     protected function setupShowOperation()
@@ -125,7 +137,7 @@ class InvoiceCrudController extends CrudController
 
                 $product_id = (int)$value['product_id'];
                 $product = Product::findOrFail($product_id);
-    
+
                 $qty = floatval($value['quantity'] ?? 1);
                 $price = floatval($product->price ?? 0);
                 $lineTotal = $qty * $price;
@@ -145,11 +157,7 @@ class InvoiceCrudController extends CrudController
         $taxAmount = $subtotal * ($taxPercent / 100);
         $grandTotal = $subtotal + $taxAmount;
 
-        $data = [
-            'company_name'   => config('settings.company_name'),
-            'company_extras'   => config('settings.company_extras'),
-            'company_address'   => config('settings.company_address'),
-            'company_phone'   => config('settings.company_phone'),
+        $data = array_merge(CompanySettings::forInvoice(), [
             'invoice_number' => $request->invoice_number,
             'date'       => $request->date,
             'billing_notes'  => $request->notes,
@@ -161,7 +169,8 @@ class InvoiceCrudController extends CrudController
             'client_email'    => $request->client_email,
             'client_phone'    => $request->client_phone,
             'discount'    => $request->discount,
-        ];
+            'is_paid'     => 0,
+        ]);
 
         $invoice = Invoice::firstOrCreate([
             'invoice_number' => $request->invoice_number,
@@ -195,7 +204,115 @@ class InvoiceCrudController extends CrudController
 
         $pdf->setPaper('A4', 'portrait');
 
-        return $pdf->download('invoice-' . $request->invoice_number . '.pdf');
+        // return $pdf->download('invoice-' . $request->invoice_number . '.pdf');
+        return redirect()->route('invoice.index')->with('success', 'Invoice created successfully.');
+    }
+
+    public function update($id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $request = request();
+
+        $request->validate([
+            'invoice_number' => 'required|string|unique:invoices,invoice_number,' . $id,
+            'date'           => 'required|date',
+            'client_name'    => 'required',
+            'items'            => 'required|array',
+        ]);
+
+        $invoice = Invoice::with('items')->findOrFail($id);
+
+        $contact = Contact::firstOrCreate([
+            'phone' => $request->client_phone,
+        ], [
+            'first_name'     => $request->client_name,
+            'company_name'   => $request->client_name,
+            'email'          => $request->client_email,
+            'phone'          => $request->client_phone,
+            'address_line_1' => $request->address_line_1,
+            'address_line_2' => $request->address_line_2,
+            'city'           => $request->city,
+            'postal_code'    => $request->postal_code,
+            'state'          => $request->state,
+        ]);
+
+        $items = [];
+        $subtotal = 0;
+
+        foreach ($request->items as $value) {
+            $product = Product::findOrFail((int) $value['product_id']);
+
+            $qty = floatval($value['quantity'] ?? 1);
+            $price = floatval($value['price'] ?? $product->price ?? 0);
+            $lineTotal = $qty * $price;
+
+            $subtotal += $lineTotal;
+
+            $items[] = [
+                'description' => $value['description'],
+                'quantity'    => $qty,
+                'price'       => $price,
+                'total'       => $lineTotal,
+            ];
+        }
+
+        $taxPercent = floatval($request->tax_percent ?? 0);
+        $taxAmount = $subtotal * ($taxPercent / 100);
+        $grandTotal = $subtotal - floatval($request->discount ?? 0) + floatval($request->shipping ?? 0) + $taxAmount;
+
+        $invoice->update([
+            'invoice_number' => $request->invoice_number,
+            'contact_id'     => $contact->id,
+            'date'           => $request->date,
+            'subtotal'       => $subtotal,
+            'discount'       => $request->discount ?? 0,
+            'total'          => $grandTotal,
+            'notes'          => $request->notes,
+        ]);
+
+        $invoice->items()->delete();
+
+        foreach ($request->items as $item) {
+            $product = Product::findOrFail((int) $item['product_id']);
+
+            InvoiceItem::create([
+                'invoice_id'  => $invoice->id,
+                'product_id'  => $product->id,
+                'description' => $item['description'],
+                'quantity'    => $item['quantity'],
+                'unit_price'  => floatval($item['price'] ?? $product->price),
+                'subtotal'    => $item['quantity'] * floatval($item['price'] ?? $product->price),
+                'total'       => $item['quantity'] * floatval($item['price'] ?? $product->price),
+            ]);
+        }
+
+        // $data = [
+        //     'company_name'           => config('settings.company_name'),
+        //     'company_extras'         => config('settings.company_extras'),
+        //     'company_address_line_1' => config('settings.company_address_line_1'),
+        //     'company_address_line_2' => config('settings.company_address_line_2'),
+        //     'company_postal_code'    => config('settings.company_postal_code'),
+        //     'company_city'           => config('settings.company_city'),
+        //     'company_state'          => config('settings.company_state'),
+        //     'company_phone'          => config('settings.company_phone'),
+        //     'invoice_number'  => $request->invoice_number,
+        //     'date'            => $request->date,
+        //     'billing_notes'   => $request->notes,
+        //     'items'           => $items,
+        //     'subtotal'        => $subtotal,
+        //     'grand_total'     => $grandTotal,
+        //     'client_name'     => $request->client_name,
+        //     'client_address'  => $request->client_address ?? '',
+        //     'client_email'    => $request->client_email,
+        //     'client_phone'    => $request->client_phone,
+        //     'discount'        => $request->discount,
+        // ];
+
+        // $pdf = Pdf::loadView('admin.invoice', $data);
+        // $pdf->setPaper('A4', 'portrait');
+        // return $pdf->download('invoice-' . $request->invoice_number . '.pdf');
+        return redirect()->route('invoice.index')->with('success', 'Invoice updated successfully.');
     }
 
     public function redownload(Request $request)
@@ -230,11 +347,7 @@ class InvoiceCrudController extends CrudController
 
         $contact = $invoice->contact()->first();
 
-        $data = [
-            'company_name'   => config('settings.company_name'),
-            'company_extras'   => config('settings.company_extras'),
-            'company_address'   => config('settings.company_address'),
-            'company_phone'   => config('settings.company_phone'),
+        $data = array_merge(CompanySettings::forInvoice(), [
             'invoice_number' => $invoice->invoice_number,
             'date'       => $invoice->date,
             'billing_notes'  => $invoice->notes,
@@ -246,7 +359,8 @@ class InvoiceCrudController extends CrudController
             'client_address' => '',
             'client_phone'    => $contact->phone,
             'discount'    => $invoice->discount,
-        ];
+            'is_paid'     => $invoice->is_paid,
+        ]);
 
         if (config('settings.allow_client_address')) {
             $data['client_address'] = $contact->address_line_1 . ', ' . $contact->address_line_2 . ', ' . $contact->city . ', ' . $contact->postal_code . ', ' . $contact->state;
@@ -257,5 +371,27 @@ class InvoiceCrudController extends CrudController
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->download('invoice-' . $invoice->invoice_number . '.pdf');
+    }
+
+    public function markPaid($id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $invoice = Invoice::findOrFail($id);
+
+        if ($invoice->is_paid) {
+            \Alert::info('This invoice is already marked as paid.')->flash();
+
+            return redirect()->back();
+        }
+
+        $invoice->update([
+            'is_paid' => 1,
+            'paid_at' => now(),
+        ]);
+
+        \Alert::success('Invoice marked as paid. Downloads will now show as Receipt.')->flash();
+
+        return redirect()->back();
     }
 }

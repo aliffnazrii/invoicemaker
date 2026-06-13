@@ -6,6 +6,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 use App\Http\Controllers\Admin\Traits\TraitPhone;
+use App\Support\CompanySettings;
 use Illuminate\Http\Request;
 use App\Models\Setting;
 
@@ -72,6 +73,16 @@ class SettingCrudController extends CrudController
                 'tab' => 'Address'
             ],
             [
+                'name'         => 'company_logo',
+                'label'        => 'Company Logo',
+                'type'         => 'company_logo',
+                'crop_width'   => CompanySettings::LOGO_WIDTH,
+                'crop_height'  => CompanySettings::LOGO_HEIGHT,
+                'default'      => $savedSettings['company_logo'] ?? '',
+                'tab'          => 'Address',
+                'hint'         => 'Upload and crop your logo. It will be saved at ' . CompanySettings::LOGO_WIDTH . '×' . CompanySettings::LOGO_HEIGHT . ' pixels for use on invoices.',
+            ],
+            [
                 'name'    => 'company_extras',
                 'label'   => 'Company Extras',
                 'type'    => 'text',
@@ -79,17 +90,45 @@ class SettingCrudController extends CrudController
                 'tab' => 'Address'
             ],
             [
-                'name'    => 'company_address',
-                'label'   => 'Company Address',
+                'name'    => 'company_address_line_1',
+                'label'   => 'Address Line 1',
                 'type'    => 'textarea',
-                'default' => $savedSettings['company_address'] ?? '',
+                'default' => $savedSettings['company_address_line_1'] ?? '',
+                'tab' => 'Address'
+            ],
+            [
+                'name'    => 'company_address_line_2',
+                'label'   => 'Address Line 2',
+                'type'    => 'textarea',
+                'default' => $savedSettings['company_address_line_2'] ?? '',
+                'tab' => 'Address'
+            ],
+            [
+                'name'    => 'company_postal_code',
+                'label'   => 'Postcode',
+                'type'    => 'text',
+                'default' => $savedSettings['company_postal_code'] ?? '',
+                'tab' => 'Address'
+            ],
+            [
+                'name'    => 'company_city',
+                'label'   => 'City',
+                'type'    => 'text',
+                'default' => $savedSettings['company_city'] ?? '',
+                'tab' => 'Address'
+            ],
+            [
+                'name'    => 'company_state',
+                'label'   => 'State',
+                'type'    => 'text',
+                'default' => $savedSettings['company_state'] ?? '',
                 'tab' => 'Address'
             ],
             [
                 'name'    => 'company_phone',
                 'label'   => 'Company Phone',
                 'type'    => 'phone',
-                'default' => $savedSettings['company_phone'] ? substr($savedSettings['company_phone'], 2) : '',
+                'default' => $savedSettings['company_phone'] ?? '',
                 'tab' => 'Address',
                 'prefix' => '+60'
             ],
@@ -120,9 +159,12 @@ class SettingCrudController extends CrudController
 
         $requestData['company_phone'] = $this->handlePhone2($requestData['company_phone']);
 
+        $this->handleCompanyLogo($request);
+
+        $skipKeys = ['company_logo', 'company_logo_cropped', 'company_logo_clear'];
+
         foreach ($requestData as $key => $value) {
-            // Skips backpack control fields like '_token' or '_save_action'
-            if (str_starts_with($key, '_')) {
+            if (str_starts_with($key, '_') || in_array($key, $skipKeys, true)) {
                 continue;
             }
 
@@ -141,5 +183,30 @@ class SettingCrudController extends CrudController
 
         $this->crud->setSaveAction();
         return redirect(backpack_url('setting'));
+    }
+
+    private function handleCompanyLogo(Request $request): void
+    {
+        if ($request->input('company_logo_clear') === '1') {
+            CompanySettings::deleteLogo();
+
+            Setting::updateOrCreate(
+                ['key' => 'company_logo'],
+                ['name' => 'Company Logo', 'value' => '', 'type' => 'image']
+            );
+
+            return;
+        }
+
+        if (!$request->filled('company_logo_cropped')) {
+            return;
+        }
+
+        $path = CompanySettings::saveLogoFromBase64($request->input('company_logo_cropped'));
+
+        Setting::updateOrCreate(
+            ['key' => 'company_logo'],
+            ['name' => 'Company Logo', 'value' => $path, 'type' => 'image']
+        );
     }
 }

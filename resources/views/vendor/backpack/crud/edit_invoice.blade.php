@@ -4,36 +4,57 @@
   $defaultBreadcrumbs = [
     trans('backpack::crud.admin') => url(config('backpack.base.route_prefix'), 'dashboard'),
     $crud->entity_name_plural => url($crud->route),
-    trans('backpack::crud.add') => false,
+    trans('backpack::crud.edit') => false,
   ];
 
   $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
+
+  $contact = $entry->contact;
+  $clientName = $contact
+    ? (trim(($contact->first_name ?? '') . ' ' . ($contact->last_name ?? '')) ?: ($contact->company_name ?? ''))
+    : '';
+  $invoiceDate = $entry->date instanceof \Carbon\Carbon
+    ? $entry->date->format('Y-m-d')
+    : \Carbon\Carbon::parse($entry->date)->format('Y-m-d');
+  $lineItems = $entry->items->isNotEmpty() ? $entry->items : collect([null]);
+  $existingContactData = $contact ? [
+    'id' => $contact->id,
+    'name' => $clientName,
+    'email' => $contact->email,
+    'phone' => $contact->phone,
+    'address_line_1' => $contact->address_line_1,
+    'address_line_2' => $contact->address_line_2,
+    'city' => $contact->city,
+    'state' => $contact->state,
+    'postal_code' => $contact->postal_code,
+  ] : null;
 @endphp
 
 @section('content')
-  <div class="row" bp-section="invoice-create-form">
+  <div class="row" bp-section="invoice-edit-form">
     <div class="col-md-12">
 
       <a href="{{ url($crud->route) }}" class="hidden-print back-btn"><i class="la la-angle-double-left"></i>
         {{ trans('backpack::crud.back_to_all') }} <span>{{ $crud->entity_name_plural }}</span></a>
 
-      <form method="POST" action="{{ backpack_url('/download-invoice') }}" class="mt-2">
+      <form method="POST" action="{{ url($crud->route . '/' . $entry->getKey()) }}" class="mt-2">
         {!! csrf_field() !!}
+        @method('PUT')
 
         <div class="card">
           <div class="card-header font-weight-bold">
-            <i class="la la-file-invoice"></i> &nbsp;Create New Invoice
+            <i class="la la-file-invoice"></i> &nbsp;Edit Invoice
           </div>
 
           <div class="card-body">
             <div class="row">
               <div class="form-group col-md-4">
                 <label class="font-weight-bold">Invoice Number</label>
-                <input type="text" name="invoice_number" class="form-control" value="INV-{{ date('YmdHis') }}" required>
+                <input type="text" name="invoice_number" class="form-control" value="{{ old('invoice_number', $entry->invoice_number) }}" required>
               </div>
               <div class="form-group col-md-4">
                 <label class="font-weight-bold">Date</label>
-                <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                <input type="date" name="date" class="form-control" value="{{ old('date', $invoiceDate) }}" required>
               </div>
             </div>
 
@@ -46,39 +67,39 @@
               </div>
             </div>
 
-            <div id="client-details-wrapper" style="display: none;">
+            <div id="client-details-wrapper" style="{{ $contact ? 'display: block;' : 'display: none;' }}">
               <div class="row">
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">Client Name</label>
-                  <input type="text" name="client_name" id="client_name" class="form-control" value="">
+                  <input type="text" name="client_name" id="client_name" class="form-control" value="{{ old('client_name', $clientName) }}">
                 </div>
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">Client Email</label>
-                  <input type="email" name="client_email" id="client_email" class="form-control" value="">
+                  <input type="email" name="client_email" id="client_email" class="form-control" value="{{ old('client_email', $contact?->email ?? '') }}">
                 </div>
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">Client Phone</label>
-                  <input type="tel" name="client_phone" id="client_phone" class="form-control" value="">
+                  <input type="tel" name="client_phone" id="client_phone" class="form-control" value="{{ old('client_phone', $contact?->phone ?? '') }}">
                 </div>
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">Address 1</label>
-                  <input type="text" name="address_line_1" id="client_address_line_1" class="form-control">
+                  <input type="text" name="address_line_1" id="client_address_line_1" class="form-control" value="{{ old('address_line_1', $contact?->address_line_1 ?? '') }}">
                 </div>
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">Address 2</label>
-                  <input type="text" name="address_line_2" id="client_address_line_2" class="form-control">
+                  <input type="text" name="address_line_2" id="client_address_line_2" class="form-control" value="{{ old('address_line_2', $contact?->address_line_2 ?? '') }}">
                 </div>
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">City</label>
-                  <input type="text" name="city" id="client_city" class="form-control">
+                  <input type="text" name="city" id="client_city" class="form-control" value="{{ old('city', $contact?->city ?? '') }}">
                 </div>
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">State</label>
-                  <input type="text" name="state" id="client_state" class="form-control">
+                  <input type="text" name="state" id="client_state" class="form-control" value="{{ old('state', $contact?->state ?? '') }}">
                 </div>
                 <div class="form-group col-md-6">
                   <label class="font-weight-bold">Postcode</label>
-                  <input type="text" name="postal_code" id="client_postal_code" class="form-control">
+                  <input type="text" name="postal_code" id="client_postal_code" class="form-control" value="{{ old('postal_code', $contact?->postal_code ?? '') }}">
                 </div>
               </div>
             </div>
@@ -96,30 +117,34 @@
                   </tr>
                 </thead>
                 <tbody id="invoice-items-body">
+                  @foreach($lineItems as $index => $item)
                   <tr class="line-item">
                     <td class="product-cell">
-                      <select name="items[0][product_id]" class="form-control product-select" style="width: 100%;"
+                      <select name="items[{{ $index }}][product_id]" class="form-control product-select" style="width: 100%;"
                         required>
                         <option value="">-- Search for a product --</option>
+                        @if($item?->product_id)
+                          <option value="{{ $item->product_id }}" selected>{{ $item->description }}</option>
+                        @endif
                       </select>
-                      <input type="hidden" name="items[0][description]" class="item-description-hidden">
+                      <input type="hidden" name="items[{{ $index }}][description]" class="item-description-hidden" value="{{ $item?->description ?? '' }}">
                     </td>
                     <td class="qty-cell">
-                      <input type="number" name="items[0][quantity]" class="form-control item-qty" value="1" min="1"
+                      <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item?->quantity ?? 1 }}" min="1"
                         step="any" required>
                     </td>
                     <td class="price-cell">
-                      <input type="number" name="
-                                  ]" class="form-control item-price" value="0.00" min="0" step="0.01" required>
+                      <input type="number" name="items[{{ $index }}][price]" class="form-control item-price" value="{{ number_format($item?->unit_price ?? 0, 2, '.', '') }}" min="0" step="0.01" required>
                     </td>
                     <td class="total-cell">
-                      <input type="text" class="form-control item-total" value="0.00" readonly>
+                      <input type="text" class="form-control item-total" value="{{ number_format(($item?->quantity ?? 0) * ($item?->unit_price ?? 0), 2, '.', '') }}" readonly>
                     </td>
                     <td class="text-center action-cell">
-                      <button type="button" class="btn btn-sm btn-danger remove-item-btn" style="display: none;"><i
+                      <button type="button" class="btn btn-sm btn-danger remove-item-btn" style="{{ $lineItems->count() === 1 ? 'display: none;' : '' }}"><i
                           class="la la-trash"></i></button>
                     </td>
                   </tr>
+                  @endforeach
                 </tbody>
               </table>
             </div>
@@ -144,7 +169,7 @@
                     <div class="d-flex align-items-center">
                       <span class="mr-2">RM</span>
                       <input type="number" id="discount-amount" name="discount"
-                        class="form-control form-control-sm text-right" style="width: 120px;" value="0.00" min="0"
+                        class="form-control form-control-sm text-right" style="width: 120px;" value="{{ old('discount', number_format($entry->discount ?? 0, 2, '.', '')) }}" min="0"
                         step="0.01">
                     </div>
                   </div>
@@ -154,7 +179,7 @@
                     <div class="d-flex align-items-center">
                       <span class="mr-2">RM</span>
                       <input type="number" id="shipping-amount" name="shipping"
-                        class="form-control form-control-sm text-right" style="width: 120px;" value="0.00" min="0"
+                        class="form-control form-control-sm text-right" style="width: 120px;" value="{{ old('shipping', '0.00') }}" min="0"
                         step="0.01">
                     </div>
                   </div>
@@ -171,14 +196,16 @@
             <div class="form-group mt-3">
               <label class="font-weight-bold">Notes / Payment Terms</label>
               <textarea name="notes" class="form-control" rows="2"
-                placeholder="Bank account details, payment instructions, or thank you note..."></textarea>
+                placeholder="Bank account details, payment instructions, or thank you note...">{{ old('notes', $entry->notes) }}</textarea>
             </div>
+
           </div>
           <div class="card-footer bg-white">
             <button type="submit" class="btn btn-success"><i class="la la-save"></i>&nbsp;Save</button>
           </div>
         </div>
       </form>
+
     </div>
   </div>
 @endsection
@@ -232,10 +259,17 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      // --- Contact Selection with Select2 AJAX ---
-      // AJAX endpoint for contacts - YOU NEED TO CREATE THIS ROUTE
-      // Example route: Route::get('api/contacts/search', [ContactController::class, 'search'])->name('contact.search');
+      const existingContact = @json($existingContactData);
+
       const contactAjaxUrl = "{{ backpack_url('api/contacts/search') }}";
+
+      if (existingContact && existingContact.id) {
+        const contactLabel = existingContact.email
+          ? `${existingContact.name} (${existingContact.email})`
+          : existingContact.name;
+        const contactOption = new Option(contactLabel, existingContact.id, true, true);
+        $('#contact-selector').append(contactOption);
+      }
 
       // Initialize Select2 for contact selector
       $('#contact-selector').select2({
@@ -328,12 +362,6 @@
       const clientAddressState = document.getElementById('client_state');
       const clientAddressPostalCode = document.getElementById('client_postal_code');
 
-      //     client_address_line_1
-      // client_address_line_2
-      // client_city
-      // client_state
-      // client_postal_code
-
       // Handle contact selection change
       $('#contact-selector').on('change', function (e) {
         const selectedData = $(this).select2('data')[0];
@@ -345,16 +373,18 @@
         }
 
         if (selectedData.id === 'new') {
-          // Show details wrapper and clear fields for new contact entry
           detailsWrapper.style.display = 'block';
           clientNameInput.value = '';
           clientEmailInput.value = '';
           clientPhoneInput.value = '';
-          clientAddressInput.value = '';
+          clientAddress1.value = '';
+          clientAddress2.value = '';
+          clientAddressCity.value = '';
+          clientAddressState.value = '';
+          clientAddressPostalCode.value = '';
           clientNameInput.required = true;
           clientEmailInput.required = false;
           clientPhoneInput.required = false;
-          // clientAddressInput.required = false;
           clientAddress1.required = false;
           clientAddress2.required = false;
           clientAddressCity.required = false;
@@ -368,11 +398,11 @@
           clientNameInput.required = true;
           clientEmailInput.required = false;
           clientPhoneInput.required = false;
-          clientAddress1.value = selectedData.address_line_1;
-          clientAddress2.value = selectedData.address_line_2;
-          clientAddressCity.value = selectedData.city;
-          clientAddressState.value = selectedData.postal_code;
-          clientAddressPostalCode.value = selectedData.state;
+          clientAddress1.value = selectedData.address_line_1 || '';
+          clientAddress2.value = selectedData.address_line_2 || '';
+          clientAddressCity.value = selectedData.city || '';
+          clientAddressState.value = selectedData.state || '';
+          clientAddressPostalCode.value = selectedData.postal_code || '';
           clientAddress1.required = false;
           clientAddress2.required = false;
           clientAddressCity.required = false;
@@ -386,7 +416,7 @@
 
       const productAjaxUrl = "{{ backpack_url('api/products/search') }}";
 
-      let itemIndex = 1;
+      let itemIndex = {{ $lineItems->count() }};
 
       const discountInput = document.getElementById('discount-amount');
       const shippingInput = document.getElementById('shipping-amount');
@@ -497,25 +527,25 @@
         const newRow = document.createElement('tr');
         newRow.className = 'line-item';
         newRow.innerHTML = `
-                      <td class="product-cell">
-                        <select name="items[${itemIndex}][product_id]" class="form-control product-select" style="width: 100%;" required>
-                          <option value="">-- Search for a product --</option>
-                        </select>
-                        <input type="hidden" name="items[${itemIndex}][description]" class="item-description-hidden">
-                      </td>
-                      <td class="qty-cell">
-                        <input type="number" name="items[${itemIndex}][quantity]" class="form-control item-qty" value="1" min="1" step="any" required>
-                      </td>
-                      <td class="price-cell">
-                        <input type="number" name="items[${itemIndex}][price]" class="form-control item-price" value="0.00" min="0" step="0.01" required>
-                      </td>
-                      <td class="total-cell">
-                        <input type="text" class="form-control item-total" value="0.00" readonly>
-                      </td>
-                      <td class="text-center action-cell">
-                        <button type="button" class="btn btn-sm btn-danger remove-item-btn"><i class="la la-trash"></i></button>
-                      </td>
-                    `;
+          <td class="product-cell">
+            <select name="items[${itemIndex}][product_id]" class="form-control product-select" style="width: 100%;" required>
+              <option value="">-- Search for a product --</option>
+            </select>
+            <input type="hidden" name="items[${itemIndex}][description]" class="item-description-hidden">
+          </td>
+          <td class="qty-cell">
+            <input type="number" name="items[${itemIndex}][quantity]" class="form-control item-qty" value="1" min="1" step="any" required>
+          </td>
+          <td class="price-cell">
+            <input type="number" name="items[${itemIndex}][price]" class="form-control item-price" value="0.00" min="0" step="0.01" required>
+          </td>
+          <td class="total-cell">
+            <input type="text" class="form-control item-total" value="0.00" readonly>
+          </td>
+          <td class="text-center action-cell">
+            <button type="button" class="btn btn-sm btn-danger remove-item-btn"><i class="la la-trash"></i></button>
+          </td>
+        `;
 
         document.getElementById('invoice-items-body').appendChild(newRow);
 
@@ -582,16 +612,13 @@
         shippingInput.addEventListener('input', calculateTotals);
       }
 
-      const initialSelect = document.querySelector('#invoice-items-body .product-select');
-      if (initialSelect) {
-        initProductSelect(initialSelect);
-      }
+      document.querySelectorAll('#invoice-items-body .product-select').forEach(function (selectElement) {
+        initProductSelect(selectElement);
+      });
 
-      const initialRow = document.querySelector('#invoice-items-body .line-item');
-      attachRowEvents(initialRow);
-
-      const initialRemoveBtn = initialRow.querySelector('.remove-item-btn');
-      if (initialRemoveBtn) initialRemoveBtn.style.display = 'none';
+      document.querySelectorAll('#invoice-items-body .line-item').forEach(function (row) {
+        attachRowEvents(row);
+      });
 
       const addItemBtn = document.getElementById('add-item-btn');
       addItemBtn.addEventListener('click', addLineItem);
