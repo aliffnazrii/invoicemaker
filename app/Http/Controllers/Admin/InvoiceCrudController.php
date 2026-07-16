@@ -151,7 +151,7 @@ class InvoiceCrudController extends CrudController
             'company_address'   => config('settings.company_address'),
             'company_phone'   => config('settings.company_phone'),
             'invoice_number' => $request->invoice_number,
-            'date'       => $request->date,
+            'date'       => date('Y-m-d', strtotime($request->date)),
             'billing_notes'  => $request->notes,
             'items'          => $items,
             'subtotal'       => $subtotal,
@@ -166,7 +166,7 @@ class InvoiceCrudController extends CrudController
         $invoice = Invoice::firstOrCreate([
             'invoice_number' => $request->invoice_number,
             'contact_id' => $contact->id,
-            'date' => date('Y-m-d H:i:s'),
+            'date' => date('Y-m-d H:i:s', strtotime($request->date)),
             'subtotal' => $subtotal,
             'discount' => $request->discount,
             'total' => $grandTotal,
