@@ -34,6 +34,26 @@
             font-weight: bold;
         }
 
+        .company-header-inner {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .company-header-inner td {
+            vertical-align: top;
+        }
+
+        .company-logo-cell {
+            width: 200px;
+            padding-right: 15px;
+        }
+
+        .company-logo {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+        }
+
         .invoice-title {
             font-size: 32px;
             color: #2c3e50;
@@ -143,19 +163,46 @@
     <table class="invoice-header-table">
         <tr>
             <td>
-                <div class="company-name">{{ $company_name }}</div>
-                <p style="color: #7f8c8d;">{{ $company_extras }}</p>
-                @php
-                $addr = explode(', ',$company_address);
-                @endphp
-                <p>{{ $addr[0] }}</p>
-                <p>{{ $addr[1] . ', ' . $addr[2] }}</p>
-                <p>{{ $addr[3] }}</p>
+                <table class="company-header-inner">
+                    <tr>
+
+                        <td>
+                            <div class="company-name">{{ $company_name }}</div>
+                            <p style="color: #7f8c8d;">{{ $company_extras }}</p>
+                            @if(!empty($company_address_line_1))
+                                <p>{{ $company_address_line_1 }}</p>
+                            @endif
+                            @if(!empty($company_address_line_2))
+                                <p>{{ $company_address_line_2 }}</p>
+                            @endif
+                            @php
+                                $cityLine = trim(implode(' ', array_filter([$company_postal_code ?? '', $company_city ?? ''])));
+                                if (!empty($company_state)) {
+                                    $cityLine = $cityLine ? $cityLine . ', ' . $company_state : $company_state;
+                                }
+                            @endphp
+                            @if(!empty($cityLine))
+                                <p>{{ $cityLine }}</p>
+                            @endif
+                        </td>
+                    </tr>
+                </table>
             </td>
             <td class="text-right">
-                <div class="invoice-title">INVOICE/RECEIPT</div>
-                <p class="meta-text"><strong>No:</strong> {{ $invoice_number }}</p>
+                <div class="invoice-title">{{ !empty($is_paid) ? 'RECEIPT' : 'INVOICE' }}</div>
+                <div class="text-left">
+                    <p class="meta-text"><strong>No:</strong> {{ $invoice_number }}</p>
+                    @if(!empty($company_logo))
+                        <img src="{{ $company_logo }}" alt="Company Logo" class="company-logo">
+                    @endif
+                </div>
+
             </td>
+            {{-- @if(!empty($company_logo))
+            <td class="company-logo-cell">
+                <img src="{{ $company_logo }}" alt="Company Logo" class="company-logo">
+            </td>
+            @endif --}}
         </tr>
     </table>
 
@@ -188,12 +235,12 @@
         </thead>
         <tbody>
             @foreach($items as $item)
-            <tr>
-                <td>{{ $item['description'] }}</td>
-                <td class="text-right">{{ $item['quantity'] }}</td>
-                <td class="text-right">RM{{ number_format($item['price'], 2) }}</td>
-                <td class="text-right">RM{{ number_format($item['total'], 2) }}</td>
-            </tr>
+                <tr>
+                    <td>{{ $item['description'] }}</td>
+                    <td class="text-right">{{ $item['quantity'] }}</td>
+                    <td class="text-right">RM{{ number_format($item['price'], 2) }}</td>
+                    <td class="text-right">RM{{ number_format($item['total'], 2) }}</td>
+                </tr>
             @endforeach
         </tbody>
     </table>
@@ -220,10 +267,10 @@
 
     <!-- Notes Block (Rendered if set) -->
     @if(!empty($billing_notes))
-    <div class="notes-box">
-        <div class="section-title" style="color: #2c3e50; margin-bottom: 5px;">Notes</div>
-        <p style="color: #555;">{{ $billing_notes }}</p>
-    </div>
+        <div class="notes-box">
+            <div class="section-title" style="color: #2c3e50; margin-bottom: 5px;">Notes</div>
+            <p style="color: #555;">{{ $billing_notes }}</p>
+        </div>
     @endif
 
     <!-- Base Document Footer Info -->

@@ -11,7 +11,12 @@ class Invoice extends Model
 
     protected $fillable = [
         'invoice_number', 'contact_id', 'date', 'subtotal', 
-        'tax_total', 'discount', 'total', 'notes', 'invoice_path'
+        'tax_total', 'discount', 'total', 'notes', 'invoice_path',
+        'is_paid', 'paid_at'
+    ];
+
+    protected $casts = [
+        'paid_at' => 'datetime',
     ];
 
     public function contact()

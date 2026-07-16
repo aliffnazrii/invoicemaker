@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ProductCrudController;
 use App\Http\Controllers\Admin\ContactCrudController;
+use App\Http\Controllers\Admin\AdminController;
 
 // --------------------------
 // Custom Backpack Routes
@@ -18,10 +19,14 @@ Route::group([
     ),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
+    Route::get('dashboard', [AdminController::class, 'dashboard']);
+    Route::get('/', [AdminController::class, 'redirect']);
+
     Route::crud('user', 'UserCrudController');
     Route::crud('invoice', 'InvoiceCrudController');
     Route::post('/download-invoice', 'InvoiceCrudController@invoice');
     Route::get('invoice/{id}/redownload-invoice', 'InvoiceCrudController@redownload')->name('invoice.redownload');
+    Route::post('invoice/{id}/mark-paid', 'InvoiceCrudController@markPaid')->name('invoice.mark_paid');
     Route::crud('setting', 'SettingCrudController');
     Route::crud('contact', 'ContactCrudController');
     Route::crud('product', 'ProductCrudController');
