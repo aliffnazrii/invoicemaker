@@ -51,10 +51,15 @@ class ProductCrudController extends CrudController
                 'name'  => 'name',
                 'label' => 'Name',
                 'type'  => 'custom_html',
-                'value' => function ($entry) {
-                    return '<a href="' . route('product.show', $entry->id) . '">' . $entry->name . '</a>';
+                'value' => function ($entry) use ($show) {
+                    if ($show) {
+                        return $entry->name;
+                    } else {
+
+                        return '<a href="' . route('product.show', $entry->id) . '">' . $entry->name . '</a>';
+                    }
                 },
-    
+
             ],
             [
                 'name'  => 'description',

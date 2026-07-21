@@ -38,13 +38,25 @@ class InvoiceCrudController extends CrudController
         $this->crud->addButtonFromView('line', 'redownload_invoice', 'redownload_invoice', 'end');
 
 
-        // CRUD::column('invoice_number')->type('text')->label('Invoice');
+        $show = $this->crud->getCurrentOperation() == 'show';
 
+        if (!$show) {
+            $text_align =  [
+                'element' => 'div',
+                'style'   => 'width: 100%; text-align: right; display: block;',
+            ];
+        } else {
+            $text_align = array();
+        }
         CRUD::addColumn([
             'name' => 'invoice_number',
             'type' => 'custom_html',
-            'value' => function ($entry) {
-                return '<a href="' . route('invoice.show', $entry->id) . '">' . $entry->invoice_number . '</a>';
+            'value' => function ($entry) use ($show) {
+                if ($show) {
+                    return $entry->invoice_number;
+                } else {
+                    return '<a href="' . route('invoice.show', $entry->id) . '">' . $entry->invoice_number . '</a>';
+                }
             },
         ]);
 
@@ -56,17 +68,6 @@ class InvoiceCrudController extends CrudController
             });
 
         CRUD::column('date')->type('date');
-
-        $show = $this->crud->getCurrentOperation() == 'show';
-
-        if (!$show) {
-            $text_align =  [
-                'element' => 'div',
-                'style'   => 'width: 100%; text-align: right; display: block;',
-            ];
-        } else {
-            $text_align = array();
-        }
 
         CRUD::addColumn([
             'name' => 'subtotal',
