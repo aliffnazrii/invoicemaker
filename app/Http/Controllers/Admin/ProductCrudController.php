@@ -35,13 +35,26 @@ class ProductCrudController extends CrudController
 
     protected function setupListOperation()
     {
+        $show = $this->crud->getCurrentOperation() == 'show';
 
-        
+        if (!$show) {
+            $text_align =  [
+                'element' => 'div',
+                'style'   => 'width: 100%; text-align: right; display: block;',
+            ];
+        } else {
+            $text_align = array();
+        }
+
         $this->crud->addColumns([
             [
                 'name'  => 'name',
                 'label' => 'Name',
-                'type'  => 'text',
+                'type'  => 'custom_html',
+                'value' => function ($entry) {
+                    return '<a href="' . route('product.show', $entry->id) . '">' . $entry->name . '</a>';
+                },
+    
             ],
             [
                 'name'  => 'description',
@@ -56,8 +69,12 @@ class ProductCrudController extends CrudController
             [
                 'name'  => 'price',
                 'label' => 'Price',
-                'type'  => 'number',
-                'prefix' => 'RM'
+                'type'  => 'text',
+                'prefix' => 'RM',
+                'value' => function ($entry) {
+                    return number_format($entry->price, 2);
+                },
+                'wrapper' => $text_align
             ],
         ]);
     }

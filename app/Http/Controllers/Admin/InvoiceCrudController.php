@@ -38,7 +38,15 @@ class InvoiceCrudController extends CrudController
         $this->crud->addButtonFromView('line', 'redownload_invoice', 'redownload_invoice', 'end');
 
 
-        CRUD::column('invoice_number')->type('text')->label('Invoice');
+        // CRUD::column('invoice_number')->type('text')->label('Invoice');
+
+        CRUD::addColumn([
+            'name' => 'invoice_number',
+            'type' => 'custom_html',
+            'value' => function ($entry) {
+                return '<a href="' . route('invoice.show', $entry->id) . '">' . $entry->invoice_number . '</a>';
+            },
+        ]);
 
         CRUD::column('contact_id')
             ->type('custom_html')
@@ -48,12 +56,45 @@ class InvoiceCrudController extends CrudController
             });
 
         CRUD::column('date')->type('date');
-        CRUD::column('subtotal')->type('number')->prefix('RM');
-        CRUD::column('discount')->type('number')->prefix('RM');
 
-        CRUD::column('total')
-            ->type('number')
-            ->prefix('RM');
+        $show = $this->crud->getCurrentOperation() == 'show';
+
+        if (!$show) {
+            $text_align =  [
+                'element' => 'div',
+                'style'   => 'width: 100%; text-align: right; display: block;',
+            ];
+        } else {
+            $text_align = array();
+        }
+
+        CRUD::addColumn([
+            'name' => 'subtotal',
+            'type' => 'text',
+            'prefix' => 'RM',
+            'value' => function ($entry) {
+                return number_format($entry->subtotal, 2);
+            },
+            'wrapper' => $text_align
+        ]);
+        CRUD::addColumn([
+            'name' => 'discount',
+            'type' => 'text',
+            'prefix' => 'RM',
+            'value' => function ($entry) {
+                return number_format($entry->discount, 2);
+            },
+            'wrapper' => $text_align
+        ]);
+        CRUD::addColumn([
+            'name' => 'total',
+            'type' => 'text',
+            'prefix' => 'RM',
+            'value' => function ($entry) {
+                return number_format($entry->total, 2);
+            },
+            'wrapper' => $text_align
+        ]);
 
         CRUD::column('is_paid')
             ->type('custom_html')
@@ -139,7 +180,7 @@ class InvoiceCrudController extends CrudController
                 $product = Product::findOrFail($product_id);
 
                 $qty = floatval($value['quantity'] ?? 1);
-                $price = floatval($product->price ?? 0);
+                $price = $value['price'] ?? floatval($product->price ?? 0);
                 $lineTotal = $qty * $price;
 
                 $subtotal += $lineTotal;
@@ -155,7 +196,7 @@ class InvoiceCrudController extends CrudController
 
         $taxPercent = floatval($request->tax_percent ?? 0);
         $taxAmount = $subtotal * ($taxPercent / 100);
-        $grandTotal = $subtotal + $taxAmount;
+        $grandTotal = ($subtotal - $request->discount) + $taxAmount;
 
         $data = array_merge(CompanySettings::forInvoice(), [
             'invoice_number' => $request->invoice_number,
@@ -171,6 +212,7 @@ class InvoiceCrudController extends CrudController
             'discount'    => $request->discount,
             'is_paid'     => 0,
         ]);
+
 
         $invoice = Invoice::firstOrCreate([
             'invoice_number' => $request->invoice_number,

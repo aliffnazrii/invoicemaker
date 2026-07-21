@@ -12,7 +12,7 @@ class DashboardStats
     public static function totalSales(): float
     {
         return (float) Invoice::query()
-            ->selectRaw('COALESCE(SUM(total - discount), 0) as sales')
+            ->selectRaw('COALESCE(SUM(total), 0) as sales')
             ->value('sales');
     }
 
@@ -26,7 +26,7 @@ class DashboardStats
             $sales = (float) Invoice::query()
                 ->whereYear('date', $date->year)
                 ->whereMonth('date', $date->month)
-                ->selectRaw('COALESCE(SUM(total - discount), 0) as sales')
+                ->selectRaw('COALESCE(SUM(total), 0) as sales')
                 ->value('sales');
 
             $results->push([

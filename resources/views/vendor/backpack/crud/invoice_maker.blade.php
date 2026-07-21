@@ -109,8 +109,7 @@
                         step="any" required>
                     </td>
                     <td class="price-cell">
-                      <input type="number" name="
-                                  ]" class="form-control item-price" value="0.00" min="0" step="0.01" required>
+                      <input type="number" name="items[0][price]" class="form-control item-price" value="0.00" min="0" step="0.01" required>
                     </td>
                     <td class="total-cell">
                       <input type="text" class="form-control item-total" value="0.00" readonly>

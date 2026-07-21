@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Invoice;
 
 class DebugController extends Controller
 {
@@ -19,5 +20,16 @@ class DebugController extends Controller
     public function test()
     {
         dd(config('settings.company_name'));
+    }
+
+    public function update()
+    {
+        $invoices = Invoice::all();
+
+        foreach ($invoices as $invoice) {
+
+            $invoice->total = $invoice->subtotal - $invoice->discount;
+            $invoice->save();
+        }
     }
 }
