@@ -111,7 +111,12 @@ class ProductCrudController extends CrudController
                 'name'  => 'price',
                 'label' => 'Price',
                 'type'  => 'number',
-                'prefix' => 'RM'
+
+                'prefix' => 'RM',
+                'attributes' => [
+                    'step' => '0.01', // Allows up to 2 decimal places (e.g., 99.99)
+                    'min'  => '0',    // Prevents negative prices (optional)
+                ],
             ],
         ]);
     }

@@ -29,7 +29,11 @@
             <div class="row">
               <div class="form-group col-md-4">
                 <label class="font-weight-bold">Invoice Number</label>
-                <input type="text" name="invoice_number" class="form-control" value="INV-{{ date('YmdHis') }}" required>
+                @php
+                  $invoice = \App\Models\Invoice::latest()->first();
+                  $invoice_id = $invoice->id;
+                @endphp
+                <input type="text" name="invoice_number" class="form-control" value="INV{{ date('Ymd') }}-{{ str_pad($invoice_id + 1, 5, "0", STR_PAD_LEFT) }}" required>
               </div>
               <div class="form-group col-md-4">
                 <label class="font-weight-bold">Date</label>
